@@ -2,54 +2,88 @@
 
 
 
-## 机械臂回归机械零点
-
+## 机械臂回归机械零点与状态查询
+**例程源码**
 ```python
 '''
-机械臂回归机械零点
+机械臂回归机械零点与状态查询
+'''
+from mirobot import Mirobot
+import time
+
+print("实例化Mirobot机械臂实例")
+arm = Mirobot(portname='COM7', debug=False)
+
+# 机械臂Home 多轴并行
+print("机械臂Homing开始")
+arm.home_simultaneous(wait=True)
+print("机械臂Homing结束")
+
+# 状态更新与查询
+print("更新机械臂状态")
+arm.update_status()
+print(f"更新后的状态对象: {arm.status}")
+print(f"更新后的状态名称: {arm.status.state}")
+```
+
+**输出日志**
+```
+实例化Mirobot机械臂实例
+机械臂Homing开始
+机械臂Homing结束
+更新机械臂状态
+更新后的状态对象: MirobotStatus(state='Idle', angle=MirobotAngles(a=0.0, b=0.0, c=0.0, x=0.0, y=0.0, z=0.0, d=0.0), cartesian=MirobotCartesians(x=198.67, y=0.0, z=230.72, a=0.0, b=0.0, c=0.0), pump_pwm=0, valve_pwm=0, motion_mode=True) 
+更新后的状态名称: Idle
+```
+## 设置关节角度
+
+**例程源码**
+```python
+'''
+设置机械臂关节的角度, 单位°
+----------------------------------
+- x:关节1
+- y:关节2
+- z:关节3
+- a:关节4
+- b:关节5
+- c:关节6
+- d:平动关节(滑轨)
 '''
 from mirobot import Mirobot
 import time
 arm = Mirobot(portname='COM7', debug=False)
+arm.home_simultaneous()
 
-# 注:一定要配置为wait=False,非阻塞式等待
-# 要不然会卡死
-arm.home_simultaneous(wait=False)
-# 等待15s
-time.sleep(15)
-# 完成Homing
-print("homing done")
-```
+# 设置单个关节的角度
+print("测试设置单个关节的角度")
+arm.go_to_axis(x=100.0, wait=True)
+print("动作执行完毕")
+# 状态查询
+print(f"状态查询: {arm.get_status()}")
+# 停顿2s
+time.sleep(2)
 
-
-
-## 获取机械臂当前的状态
-
-```python
-'''
-获取机械臂的状态
-'''
-from mirobot import Mirobot
-import time
-arm = Mirobot(portname='COM7', debug=False)
-
-# 注:一定要配置为wait=False,非阻塞式等待
-# 要不然会卡死
-arm.home_simultaneous(wait=False)
-time.sleep(15)
-
-# 打印机械臂当前的状态
-print("获取机械臂的状态 ?")
-print(arm.get_status())
-```
-
-日志: 
-
-返回的是一个数组，代表当前的机械臂的状态
+# 设置多个关节的角度
+print("设置多个关节的角度")
+arm.go_to_axis(x=90, y=30, z=-20, a=10, b=20, c=45, wait=True)
+print("动作执行完毕")
+# 状态查询
+print(f"状态查询: {arm.get_status()}")
+# 停顿2s
+time.sleep(2)
 
 ```
-['', 'Free memory: 2036', 'in homeing moving...ok', '<Idle,Angle(ABCDXYZ):0.000,0.000,0.000,0.000,0.000,0.000,0.000,Cartesian coordinate(XYZ RxRyRz):198.670,0.000,230.720,0.000,0.000,0.000,Pump PWM:0,Valve 
-PWM:0,Motion_MODE:0>', 'ok'] 
+
+**输出日志**
+
+```
+测试设置单个关节的角度
+动作执行完毕
+状态查询: ['<Idle,Angle(ABCDXYZ):0.000,0.000,0.000,0.000,100.000,0.000,0.000,Cartesian coordinate(XYZ RxRyRz):-34.499,195.652,230.720,0.000,0.000,100.000,Pump PWM:0,Valve PWM:0,Motion_MODE:0>', 'ok']
+设置多个关节的角度
+动作执行完毕
+状态查询: ['<Idle,Angle(ABCDXYZ):10.000,19.982,45.005,0.000,90.005,30.001,-20.000,Cartesian coordinate(XYZ RxRyRz):-3.985,241.503,190.191,28.916,13.226,139.337,Pump PWM:0,Valve PWM:0,Motion_MODE:0>', 'ok']
 ```
 
-## 
+## 设置机械臂末端的位姿

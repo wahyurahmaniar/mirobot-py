@@ -124,7 +124,7 @@ class BluetoothLowEnergyInterface:
             return connection
 
         self.connection = self._run_and_get(start_connection())
-
+    
     def disconnect(self):
         """ Disconnect from the Bluetooth Extender Box """
         async def async_disconnect():

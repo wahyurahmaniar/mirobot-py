@@ -2,6 +2,7 @@ import logging
 
 
 class ExitOnExceptionStreamHandler(logging.StreamHandler):
+    '''数据流存在问题, 信息不能正常的发送'''
     def emit(self, record):
         super().emit(record)
         if record.levelno >= logging.ERROR:

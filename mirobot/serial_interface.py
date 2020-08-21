@@ -1,11 +1,15 @@
 import os
 import time
-
+# 使用pyserial的串口设备列表查看器
 import serial.tools.list_ports as lp
 
 from .serial_device import SerialDevice
 from .exceptions import MirobotError, MirobotAlarm, MirobotReset, MirobotAmbiguousPort
 
+# 当前操作系统的类型
+# posix： Linux
+# nt: Windows
+# java: Java虚拟机
 os_is_nt = os.name == 'nt'
 os_is_posix = os.name == 'posix'
 
@@ -49,18 +53,22 @@ class SerialInterface:
 
         # check if baudrate was passed in args or kwargs, if not use the default value instead
         if baudrate is None:
+            # 设置默认的波特率
             serial_device_kwargs['baudrate'] = 115200
         # check if stopbits was passed in args or kwargs, if not use the default value instead
         if stopbits is None:
+            # 设置默认的停止位配置
             serial_device_kwargs['stopbits'] = 1
 
         # if portname was not passed in and autofindport is set to true, autosearch for a serial port
+        # 如果没有指定端口号，自行进行搜索
         if autofindport and portname is None:
             self.default_portname = self._find_portname()
             """ The default portname to use when making connections. To override this on a individual basis, provide portname to each invokation of `BaseMirobot.connect`. """
             serial_device_kwargs['portname'] = self.default_portname
             self.logger.info(f"Using Serial Port \"{self.default_portname}\"")
         else:
+            # 设置端口号
             self.default_portname = portname
 
         self.serial_device = SerialDevice(**serial_device_kwargs)
@@ -75,7 +83,7 @@ class SerialInterface:
         """
         Set the new value for the `debug` property of `mirobot.serial_interface.SerialInterface`. Use as in `BaseMirobot.setDebug(value)`.
         Use this setter method as it will also update the logging objects of `mirobot.serial_interface.SerialInterface` and its `mirobot.serial_device.SerialDevice`. As opposed to setting `mirobot.serial_interface.SerialInterface._debug` directly which will not update the loggers.
-
+        
         Parameters
         ----------
         value : bool
@@ -85,7 +93,7 @@ class SerialInterface:
         self._debug = bool(value)
         self.serial_device.setDebug(value)
 
-    def send(self, msg, disable_debug=False, terminator=os.linesep, wait=True, wait_idle=True):
+    def send(self, msg, disable_debug=False, terminator=os.linesep, wait=True, wait_idle=False):
         """
         Send a message to the Mirobot.
 
@@ -110,9 +118,14 @@ class SerialInterface:
             If `wait` is `True`, then return a list of strings which contains message output.
             If `wait` is `False`, then return whether sending the message succeeded.
         """
-
+        # 发送消息前需要先清除缓冲区
+        cache_msg = self.empty_cache()
+        if self._debug and not disable_debug:
+            # 将缓冲数据打印出来
+            self.logger.debug(f"[RECV CACHE] {cache_msg}")
+    
         output = self.serial_device.send(msg, terminator=terminator)
-
+        
         if self._debug and not disable_debug:
             self.logger.debug(f"[SENT] {msg}")
 
@@ -123,7 +136,7 @@ class SerialInterface:
                 self.wait_until_idle()
 
         return output
-
+    
     @property
     def is_connected(self):
         """
@@ -139,11 +152,13 @@ class SerialInterface:
     def _find_portname(self):
         """
         Find the port that might potentially be connected to the Mirobot.
+        自动检索可能是Mirobot的端口号
 
         Returns
         -------
         device_name : str
             The name of the device that is (most-likely) connected to the Mirobot.
+            端口号
         """
         port_objects = lp.comports()
 
@@ -168,6 +183,7 @@ class SerialInterface:
         """
         Continuously loops over and collects message output from the serial device.
         It stops when it encounters an 'ok' or otherwise terminal condition phrase.
+        持续等待有'ok'返回
 
         Parameters
         ----------
@@ -182,14 +198,19 @@ class SerialInterface:
             A list of output strings upto and including the terminal string.
         """
         output = ['']
-
+        # 代表ok的后缀
         ok_eols = ['ok']
-
+        # Reset重置的字符
         reset_strings = ['Using reset pos!']
 
+        # eol: end of line 一行的末尾
         def matches_eol_strings(terms, s):
             for eol in terms:
-                if s.endswith(eol):
+                # 修改了这里的ok的判断条件
+                # 因为homing成功之后，返回的不是ok而是homeing moving...ok
+                # 针对这种情况做了优化, 防止卡死
+                if s.endswith(eol) or eol in s:
+                    # self.logger.debug(f'String {s} terms:{terms}, match')
                     return True
             return False
 
@@ -199,20 +220,25 @@ class SerialInterface:
             eols = ok_eols
 
         if os_is_nt and not reset_expected:
-            eol_threshold = 2
+            # Window下的期待的ok返回次数
+            # eol_threshold = 2 # 感觉是作者写错了
+            eol_threshold = 1
         else:
+            # Linux下的期待的ok返回次数
             eol_threshold = 1
 
         eol_counter = 0
         while eol_counter < eol_threshold:
+            # 读取消息
             msg = self.serial_device.listen_to_device()
-
+            # 调试, 打印接收的消息
             if self._debug and not disable_debug:
                 self.logger.debug(f"[RECV] {msg}")
-
+            
+            # 异常情况判断
             if 'error' in msg:
                 self.logger.error(MirobotError(msg.replace('error: ', '')))
-
+            # 异常情况判断
             if 'ALARM' in msg:
                 self.logger.error(MirobotAlarm(msg.split('ALARM: ', 1)[1]))
 
@@ -230,6 +256,7 @@ class SerialInterface:
         """
         Continuously loops over and refreshes state of the Mirobot.
         It stops when it encounters an 'Idle' state string.
+        等待直到系统状态为Idle空闲状态
 
         Parameters
         ----------
@@ -241,15 +268,29 @@ class SerialInterface:
         output : List[str]
             A list of output strings upto and including the terminal string.
         """
+        # 更新一下当前Mirobot的状态
         self.mirobot.update_status(disable_debug=True)
-
-        while self.mirobot.status.state != 'Idle':
+        # self.mirobot.update_status(disable_debug=False)
+        while self.mirobot.status is None or self.mirobot.status.state != 'Idle':
             time.sleep(refresh_rate)
+            # 不断的发送状态查询, 更新状态
             self.mirobot.update_status(disable_debug=True)
+            # self.mirobot.update_status(disable_debug=False)
+            # 打印mirobot当前的状态
+            if self.mirobot.status is not None:
+                self.logger.debug(f"current mirobot state: {self.mirobot.status.state}")
+            
+    def empty_cache(self):
+        '''清空接收缓冲区'''
+        cache_msg = ""
+        while(self.serial_device.serialport.in_waiting):
+            cache_msg += self.serial_device.serialport.read().decode('utf-8')
+        return cache_msg
 
     def connect(self, portname=None):
         """
         Connect to the Mirobot.
+        建立串口连接
 
         Parameters
         ----------
@@ -274,6 +315,9 @@ class SerialInterface:
         return self.wait_for_ok(reset_expected=True)
 
     def disconnect(self):
-        """ Disconnect from the Mirobot. Close the serial device connection. """
+        """ 
+        Disconnect from the Mirobot. Close the serial device connection.
+        断开与Mirobot的连接，断开串口 
+        """
         if getattr(self, 'serial_device', None) is not None:
             self.serial_device.close()

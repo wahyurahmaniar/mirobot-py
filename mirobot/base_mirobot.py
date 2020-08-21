@@ -25,7 +25,7 @@ os_is_posix = os.name == 'posix'
 class BaseMirobot(AbstractContextManager):
     """ A base class for managing and maintaining known Mirobot operations. """
 
-    def __init__(self, *device_args, debug=False, connection_type='serial', autoconnect=True, autofindport=True, exclusive=True, valve_pwm_values=('65', '40'), pump_pwm_values=('0', '1000'), default_speed=2000, reset_file=None, wait=True, **device_kwargs):
+    def __init__(self, *device_args, debug=True, connection_type='serial', autoconnect=True, autofindport=True, exclusive=True, valve_pwm_values=('65', '40'), pump_pwm_values=('0', '1000'), default_speed=2000, reset_file=None, wait=True, **device_kwargs):
         """
         Initialization of the `BaseMirobot` class.
 
@@ -84,7 +84,9 @@ class BaseMirobot(AbstractContextManager):
             args_dict['logger'] = self.logger
             args_dict['autofindport'] = autofindport
 
+            # 设置设备为串口接口
             self.device = SerialInterface(**args_dict)
+            # 设置端口名称
             self.default_portname = self.device.default_portname
 
         elif connection_type.lower() in ('bluetooth', 'bt'):
@@ -173,22 +175,27 @@ class BaseMirobot(AbstractContextManager):
     def send_msg(self, msg, var_command=False, disable_debug=False, terminator=os.linesep, wait=None, wait_idle=False):
         """
         Send a message to the Mirobot.
+        给Mirobot发送信息
 
         Parameters
         ----------
         msg : str or bytes
              A message or instruction to send to the Mirobot.
+             要发送给Mirobot的指令
         var_command : bool
             (Default value = `False`) Whether `msg` is a variable command (of form `$num=value`). Will throw an error if does not validate correctly.
+            是否为数值指令，若设置为数值设置指令，会对数值范围进行校验，如果不满足要求会报错
         disable_debug : bool
             (Default value = `False`) Whether to override the class debug setting. Used primarily by ` BaseMirobot.device.wait_until_idle`.
         terminator : str
             (Default value = `os.linesep`) The line separator to use when signaling a new line. Usually `'\\r\\n'` for windows and `'\\n'` for modern operating systems.
+            设置字符串的换行符，Windows下一般为`'\\r\\n'`
         wait : bool
             (Default value = `None`) Whether to wait for output to end and to return that output. If `None`, use class default `BaseMirobot.wait` instead.
+            是否阻塞式等待，直到等到信息回读
         wait_idle : bool
             (Default value = `False`) Whether to wait for Mirobot to be idle before returning.
-
+            是否等待Mirbot转换为Idle空闲状态再发送指令
         Returns
         -------
         msg : List[str] or bool
@@ -197,16 +204,18 @@ class BaseMirobot(AbstractContextManager):
         """
         if self.is_connected:
             # convert to str from bytes
+            # 将字符串转换为字节
             if isinstance(msg, bytes):
                 msg = str(msg, 'utf-8')
-
+            
             # remove any newlines
             msg = msg.strip()
 
             # check if this is supposed to be a variable command and fail if not
+            # 如果是数值设置指令，则进行合法性检测
             if var_command and not re.fullmatch(r'\$\d+=[\d\.]+', msg):
                 self.logger.exception(MirobotVariableCommandError("Message is not a variable command: " + msg))
-
+            
             # actually send the message
             output = self.device.send(msg,
                                       disable_debug=disable_debug,
@@ -241,6 +250,7 @@ class BaseMirobot(AbstractContextManager):
     def update_status(self, disable_debug=False):
         """
         Update the status of the Mirobot.
+        更新Mirobot的状态
 
         Parameters
         ----------
@@ -249,12 +259,26 @@ class BaseMirobot(AbstractContextManager):
 
         """
         # get only the status message and not 'ok'
-        status_msg = self.get_status(disable_debug=disable_debug)[0]
-        self._set_status(self._parse_status(status_msg))
+        # 设置状态信息
+        # 因为存在信息丢包的可能,因此需要多查询几次
+        while True:
+            status = None
+            status_str_list = self.get_status(disable_debug=disable_debug)
+
+            for msg_seg in status_str_list:
+                if "<" in msg_seg:
+                    status_msg = msg_seg
+                    status = self._parse_status(status_msg)
+                    break
+            if status is not None:
+                break
+        
+        self._set_status(status)
 
     def _set_status(self, status):
         """
         Set the status object given as the instance's new status.
+        设置新的状态
 
         Parameters
         ----------
@@ -267,6 +291,7 @@ class BaseMirobot(AbstractContextManager):
     def _parse_status(self, msg):
         """
         Parse the status string of the Mirobot and store the various values as class variables.
+        从字符串中解析Mirbot返回的状态信息, 提取有关变量赋值给机械臂对象
 
         Parameters
         ----------
@@ -280,7 +305,7 @@ class BaseMirobot(AbstractContextManager):
         """
 
         return_status = MirobotStatus()
-
+        # 用正则表达式进行匹配
         state_regex = r'<([^,]*),Angle\(ABCDXYZ\):([-\.\d,]*),Cartesian coordinate\(XYZ RxRyRz\):([-.\d,]*),Pump PWM:(\d+),Valve PWM:(\d+),Motion_MODE:(\d)>'
 
         regex_match = re.fullmatch(state_regex, msg)
@@ -312,6 +337,7 @@ class BaseMirobot(AbstractContextManager):
     def home_individual(self, wait=None):
         """
         Home each axis individually. (Command: `$HH`)
+        每个轴依次Homing, 耗时比较久
 
         Parameters
         ----------
@@ -330,6 +356,7 @@ class BaseMirobot(AbstractContextManager):
     def home_simultaneous(self, wait=None):
         """
         Home all axes simultaneously. (Command:`$H`)
+        机械臂多轴同时复位
 
         Parameters
         ----------
@@ -343,18 +370,23 @@ class BaseMirobot(AbstractContextManager):
             If `wait` is `False`, then return whether sending the message succeeded.
         """
         msg = '$H'
-        return self.send_msg(msg, wait=wait, wait_idle=True)
+        # return self.send_msg(msg, wait=wait, wait_idle=True)
+        # 取消了homing之后需要等待Idle的约束
+        return self.send_msg(msg, wait=wait, wait_idle=False)
 
     def set_hard_limit(self, state, wait=None):
         """
         Set the hard limit state.
+        设置是否开启硬件限位
 
         Parameters
         ----------
         state : bool
             Whether to use the hard limit (`True`) or not (`False`).
+            是否使用硬件限位
         wait : bool
             (Default value = `None`) Whether to wait for output to return from the Mirobot before returning from the function. This value determines if the function will block until the operation recieves feedback. If `None`, use class default `BaseMirobot.wait` instead.
+            是否阻塞式等待
 
         Returns
         -------
@@ -369,6 +401,7 @@ class BaseMirobot(AbstractContextManager):
     def set_soft_limit(self, state, wait=None):
         """
         Set the soft limit state.
+        是否开启软限位
 
         Parameters
         ----------
@@ -389,11 +422,13 @@ class BaseMirobot(AbstractContextManager):
     def unlock_shaft(self, wait=None):
         """
         Unlock each axis on the Mirobot. Homing naturally removes the lock. (Command: `M50`)
+        将Mirobot的每个轴解锁。执行完成Homing之后会自动解锁
 
         Parameters
         ----------
         wait : bool
             (Default value = `None`) Whether to wait for output to return from the Mirobot before returning from the function. This value determines if the function will block until the operation recieves feedback. If `None`, use class default `BaseMirobot.wait` instead.
+            是否阻塞式等待
 
         Returns
         -------

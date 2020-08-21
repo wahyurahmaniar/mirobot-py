@@ -10,6 +10,7 @@ class SerialDevice:
     """ A class for establishing a connection to a serial device. """
     def __init__(self, portname='', baudrate=0, stopbits=1, exclusive=True, debug=False):
         """ Initialization of `SerialDevice` class
+        串口设备初始化
 
         Parameters
         ----------
@@ -80,7 +81,7 @@ class SerialDevice:
     def listen_to_device(self):
         """
         Listen to the serial port and return a message.
-
+        
         Returns
         -------
         msg : str
@@ -106,8 +107,8 @@ class SerialDevice:
             self.serialport.stopbits = self.stopbits
 
             try:
+                self.logger.debug(f"Welcome to use mirobot_py (version： kyle2020-0821)")
                 self.logger.debug(f"Attempting to open serial port {self.portname}")
-
                 self.serialport.open()
                 self._is_open = True
 
@@ -151,6 +152,7 @@ class SerialDevice:
         """
         if self._is_open:
             try:
+                # 自动添加换行符
                 if not message.endswith(terminator):
                     message += terminator
                 self.serialport.write(message.encode('utf-8'))
