@@ -215,7 +215,7 @@ class BaseMirobot(AbstractContextManager):
             # 如果是数值设置指令，则进行合法性检测
             if var_command and not re.fullmatch(r'\$\d+=[\d\.]+', msg):
                 self.logger.exception(MirobotVariableCommandError("Message is not a variable command: " + msg))
-            
+
             # actually send the message
             output = self.device.send(msg,
                                       disable_debug=disable_debug,
@@ -713,10 +713,28 @@ message
 
         return self.send_msg(msg, wait=wait, wait_idle=True)
 
+    def pump_on(self):
+        """
+        气泵开启, 吸气
+        """
+        # pump_pwm_values=('0', '1000')
+        self.set_air_pump(self.pump_pwm_values[1]) # 气泵打开
+    
+    def pump_off(self):
+        """
+        气泵关闭, 电磁阀开启, 放气
+        """
+        # valve_pwm_values=('65', '40'),
+        self.set_air_pump(self.pump_pwm_values[0]) # 气泵关闭
+        self.set_valve(self.valve_pwm_values[1]) # 电磁阀打开
+        time.sleep(1)
+        self.set_valve(self.valve_pwm_values[0]) # 电磁阀关闭
+
     # set the pwm of the air pump
     def set_air_pump(self, pwm, wait=None):
         """
         Sets the PWM of the pnuematic pump module.
+        设置气泵的PWM信号
 
         Parameters
         ----------

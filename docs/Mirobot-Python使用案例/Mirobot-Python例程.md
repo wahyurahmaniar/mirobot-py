@@ -86,4 +86,41 @@ time.sleep(2)
 状态查询: ['<Idle,Angle(ABCDXYZ):10.000,19.982,45.005,0.000,90.005,30.001,-20.000,Cartesian coordinate(XYZ RxRyRz):-3.985,241.503,190.191,28.916,13.226,139.337,Pump PWM:0,Valve PWM:0,Motion_MODE:0>', 'ok']
 ```
 
-## 设置机械臂末端的位姿
+## 设置机械臂末端的位姿(Point2Point)
+
+**例程源码**
+```python
+'''
+机械臂腕关节的位姿控制, 点控 point to point
+'''
+from mirobot import Mirobot
+import time
+arm = Mirobot(portname='COM7', debug=False)
+print("开始Homing")
+arm.home_simultaneous()
+print("完成Homing")
+
+print("运动到目标点 A")
+arm.go_to_cartesian_ptp(200,  20, 230)
+print(f"当前末端在机械臂坐标系下的位姿 {arm.cartesian}")
+time.sleep(1)
+
+print("运动到目标点 B")
+arm.go_to_cartesian_ptp(200,  20, 150)
+print(f"当前末端在机械臂坐标系下的位姿 {arm.cartesian}")
+time.sleep(1)
+
+print("运动到目标点 C, 指定末端的姿态角")
+arm.go_to_cartesian_ptp(150,  -20,  230, a=30.0, b=0.0, c=45.0)
+print(f"当前末端在机械臂坐标系下的位姿 {arm.cartesian}")
+
+
+```
+
+**日志输出**
+![](./image/p2p.png)
+
+
+## 气泵控制
+
+**例程源码**
