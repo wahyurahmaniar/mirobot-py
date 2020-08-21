@@ -158,6 +158,49 @@ class Mirobot(BaseMirobot):
 
         return super().go_to_cartesian_lin(**inputs,
                                            speed=speed, wait=wait)
+    
+    def set_wrist_pose(self, x=None, y=None, z=None, roll=0.0, pitch=0.0, yaw=0.0, mode='p2p', speed=None, wait=None):
+        """
+        设置腕关节的位姿
+
+        Parameters
+        ----------
+        x : float
+            (Default value = `None`) 腕关节在机械臂基坐标系下的x轴坐标
+        y : float
+            (Default value = `None`) 腕关节在机械臂基坐标系下的y轴坐标
+        z : float
+            (Default value = `None`) 腕关节在机械臂基坐标系下的z轴坐标
+        roll : float
+            (Default value = `None`) 腕关节在机械臂基坐标系下的横滚角(Roll angle)
+        pitch : float
+            (Default value = `None`) 腕关节在机械臂基坐标系下的俯仰角(Pitch angle) 
+        yaw : float
+            (Default value = `None`) 腕关节在机械臂基坐标系下的偏航角(Yaw angle) 
+        mode : string
+            (Default value = `p2p`) 运动控制的模式, 默认选择p2p
+            `p2p`: 点到点的控制(Point to Point)
+            `linear`: 直线插补(Linear Interpolation)
+        speed : int
+            (Default value = `None`) The speed in which the Mirobot moves during this operation. (mm/s)
+        wait : bool
+            (Default value = `None`) Whether to wait for output to return from the Mirobot before returning from the function. This value determines if the function will block until the operation recieves feedback. If `None`, use class default `BaseMirobot.wait` instead.
+
+        Returns
+        -------
+        msg : List[str] or bool
+            If `wait` is `True`, then return a list of strings which contains message output.
+            If `wait` is `False`, then return whether sending the message succeeded.
+        """
+        if mode == "p2p":
+            # 点控模式 Point To Point
+            self.go_to_cartesian_ptp(x=x, y=y, z=z, a=yaw, b=pitch, c=yaw, speed=speed, wait=wait)
+        elif mode == "linear":
+            # 直线插补 Linera Interpolation
+            self.go_to_cartesian_lin(x=x, y=y, z=z, a=yaw, b=pitch, c=yaw, speed=speed, wait=wait)
+        else:
+            # 默认是点到点
+            self.go_to_cartesian_ptp(x=x, y=y, z=z, a=yaw, b=pitch, c=yaw, speed=speed, wait=wait)
 
     def go_to_cartesian_ptp(self, x=None, y=None, z=None, a=None, b=None, c=None, speed=None, wait=None):
         """
@@ -404,3 +447,6 @@ class Mirobot(BaseMirobot):
 
         return super().go_to_axis(d=d,
                                   speed=speed, wait=wait)
+    @property
+    def pose(self):
+        return self.cartesian

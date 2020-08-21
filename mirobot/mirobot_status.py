@@ -53,9 +53,53 @@ class MirobotAngles(featured_dataclass):
 
     @property
     def rail(self):
-        """ Location of external slide rail module """
+        """ 
+        Location of external slide rail module
+        第七轴也就是直线滑轨的平移
+        """
         return self.d
 
+    @property
+    def joint1(self):
+        """
+        关节1的角度, 单位°
+        """ 
+        return self.x
+
+    @property
+    def joint2(self):
+        """
+        关节2的角度, 单位°
+        """ 
+        return self.y
+
+    @property
+    def joint3(self):
+        """
+        关节2的角度, 单位°
+        """ 
+        return self.z
+
+    @property
+    def joint4(self):
+        """
+        关节4的角度, 单位°
+        """ 
+        return self.a
+    
+    @property
+    def joint5(self):
+        """
+        关节5的角度, 单位°
+        """ 
+        return self.b
+    
+    @property
+    def joint6(self):
+        """
+        关节4的角度, 单位°
+        """ 
+        return self.c
 
 @dataclass
 class MirobotCartesians(featured_dataclass):
@@ -88,6 +132,7 @@ class MirobotCartesians(featured_dataclass):
         """ Position on Z-axis """
         return self.z
 
+    
     @property
     def rx(self):
         """ Position of Roll angle """
@@ -103,7 +148,24 @@ class MirobotCartesians(featured_dataclass):
         """ Position of Yaw angle """
         return self.c
 
-
+    @property
+    def roll(self):
+        """ 横滚角,单位° """
+        return self.a
+    
+    @property
+    def pitch(self):
+        """ 俯仰角,单位° """
+        return self.b
+    
+    @property
+    def yaw(self):
+        """ 偏航角,单位° """
+        return self.c
+    
+    def __str__(self):
+        return f"Pose(x={self.x},y={self.y},z={self.z},roll={self.roll},pitch={self.pitch},yaw={self.yaw})"
+        
 @dataclass
 class MirobotStatus(basic_dataclass):
     """ A composite dataclass to hold all of Mirobot's trackable quantities. """

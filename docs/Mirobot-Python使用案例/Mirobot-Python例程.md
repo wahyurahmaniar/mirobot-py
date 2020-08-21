@@ -41,14 +41,6 @@ print(f"更新后的状态名称: {arm.status.state}")
 ```python
 '''
 设置机械臂关节的角度, 单位°
-----------------------------------
-- x:关节1
-- y:关节2
-- z:关节3
-- a:关节4
-- b:关节5
-- c:关节6
-- d:平动关节(滑轨)
 '''
 from mirobot import Mirobot
 import time
@@ -57,7 +49,7 @@ arm.home_simultaneous()
 
 # 设置单个关节的角度
 print("测试设置单个关节的角度")
-arm.go_to_axis(x=100.0, wait=True)
+arm.set_joint_angle({1:100.0}, wait=True)
 print("动作执行完毕")
 # 状态查询
 print(f"状态查询: {arm.get_status()}")
@@ -66,7 +58,8 @@ time.sleep(2)
 
 # 设置多个关节的角度
 print("设置多个关节的角度")
-arm.go_to_axis(x=90, y=30, z=-20, a=10, b=20, c=45, wait=True)
+target_angles = {1:90.0, 2:30.0, 3:-20.0, 4:10.0, 5:0.0, 6:90.0}
+arm.set_joint_angle(target_angles, wait=True)
 print("动作执行完毕")
 # 状态查询
 print(f"状态查询: {arm.get_status()}")
@@ -91,36 +84,57 @@ time.sleep(2)
 **例程源码**
 ```python
 '''
-机械臂腕关节的位姿控制, 点控 point to point
+机械臂腕关节的位置控制, 点控 point to point
 '''
 from mirobot import Mirobot
 import time
 arm = Mirobot(portname='COM7', debug=False)
-print("开始Homing")
 arm.home_simultaneous()
-print("完成Homing")
 
 print("运动到目标点 A")
-arm.go_to_cartesian_ptp(200,  20, 230)
-print(f"当前末端在机械臂坐标系下的位姿 {arm.cartesian}")
+arm.set_wrist_pose(200,  20, 230, mode="p2p")
+print(f"当前末端在机械臂坐标系下的位姿 {arm.pose}")
 time.sleep(1)
 
 print("运动到目标点 B")
-arm.go_to_cartesian_ptp(200,  20, 150)
-print(f"当前末端在机械臂坐标系下的位姿 {arm.cartesian}")
+arm.set_wrist_pose(200,  20, 150, mode="linear")
+print(f"当前末端在机械臂坐标系下的位姿 {arm.pose}")
 time.sleep(1)
 
 print("运动到目标点 C, 指定末端的姿态角")
-arm.go_to_cartesian_ptp(150,  -20,  230, a=30.0, b=0.0, c=45.0)
-print(f"当前末端在机械臂坐标系下的位姿 {arm.cartesian}")
-
-
+arm.set_wrist_pose(150,  -20,  230, roll=30.0, pitch=0, yaw=45.0)
+print(f"当前末端在机械臂坐标系下的位姿 {arm.pose}")
 ```
 
 **日志输出**
-![](./image/p2p.png)
+
+```
+运动到目标点 A
+当前末端在机械臂坐标系下的位姿 Pose(x=199.99,y=20.001,z=229.724,roll=-0.001,pitch=0.015,yaw=0.041)
+运动到目标点 B
+当前末端在机械臂坐标系下的位姿 Pose(x=199.987,y=20.001,z=149.696,roll=-0.002,pitch=0.019,yaw=0.041)
+运动到目标点 C, 指定末端的姿态角
+当前末端在机械臂坐标系下的位姿 Pose(x=149.858,y=-19.859,z=229.829,roll=44.991,pitch=-0.031,yaw=45.001)
+```
 
 
 ## 气泵控制
 
 **例程源码**
+```python
+'''
+气泵控制
+'''
+from mirobot import Mirobot
+import time
+arm = Mirobot(portname='COM7', debug=False)
+arm.home_simultaneous()
+
+# 气泵开启
+arm.pump_on()
+# 等待5s
+time.sleep(5)
+# 气泵关闭
+arm.pump_off()
+```
+

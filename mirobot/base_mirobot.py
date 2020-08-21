@@ -463,6 +463,34 @@ message
         args = [f'{arg_key}{value}' for arg_key, value in pairings.items() if value is not None]
 
         return ' '.join([instruction] + args)
+    
+    def set_joint_angle(self, joint_angles, speed=None, wait=None):
+        """
+        设置机械臂关节的角度
+        
+        Parameters
+        ----------
+        joint_angles : dict
+            目标关节角度字典, key是关节的ID号, value是角度(单位°)
+            举例: {1:45.0, 2:-30.0}
+        speed : int
+            (Default value = `None`) The speed in which the Mirobot moves during this operation. (mm/s)
+        wait : bool
+            (Default value = `None`) Whether to wait for output to return from the Mirobot before returning from the function. This value determines if the function will block until the operation recieves feedback. If `None`, use class default `BaseMirobot.wait` instead.
+            
+        Returns
+        -------
+        msg : List[str] or bool
+            If `wait` is `True`, then return a list of strings which contains message output.
+            If `wait` is `False`, then return whether sending the message succeeded.
+        """
+        for joint_i in range(1, 8):
+            # 补齐缺失的角度
+            if joint_i not in joint_angles:
+                joint_angles[joint_i] = None
+
+        return self.go_to_axis(x=joint_angles[1], y=joint_angles[2], z=joint_angles[3], a=joint_angles[4], \
+            b=joint_angles[5], c=joint_angles[6], d=joint_angles[7], speed=speed, wait=wait)
 
     def go_to_axis(self, x=None, y=None, z=None, a=None, b=None, c=None, d=None, speed=None, wait=None):
         """
