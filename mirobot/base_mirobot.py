@@ -268,8 +268,9 @@ class BaseMirobot(AbstractContextManager):
             for msg_seg in status_str_list:
                 if "<" in msg_seg:
                     status_msg = msg_seg
-                    status = self._parse_status(status_msg)
-                    break
+                    ret, status = self._parse_status(status_msg)
+                    if ret:
+                        break
             if status is not None:
                 break
         
@@ -324,15 +325,13 @@ class BaseMirobot(AbstractContextManager):
                                               int(pump_pwm),
                                               int(valve_pwm),
                                               bool(motion_mode))
-
+                return True, return_status
             except Exception as exception:
-                self.logger.exception(MirobotStatusError(f"Could not parse status message \"{msg}\""),
+                self.logger.exception(MirobotStatusError(f"Could not parse status message \"{msg}\" \n{str(exception)}"),
                                       exc_info=exception)
-            else:
-                return return_status
         else:
-            self.logger.error(MirobotStatusError(f"Could not parse status message \"{msg}\""))
-
+            self.logger.error(MirobotStatusError(f"Could not parse status message \"{msg}\"\n{str(exception)}"))
+            return False, None
 
     def home_individual(self, wait=None):
         """
