@@ -1,6 +1,6 @@
 import logging
 import os
-
+import time
 import serial
 
 from .exceptions import ExitOnExceptionStreamHandler, SerialDeviceOpenError, SerialDeviceReadError, SerialDeviceCloseError, SerialDeviceWriteError
@@ -78,7 +78,7 @@ class SerialDevice:
         self._is_open = self.serialport.is_open
         return self._is_open
 
-    def listen_to_device(self):
+    def listen_to_device(self, timeout=0.1):
         """
         Listen to the serial port and return a message.
         
@@ -88,7 +88,13 @@ class SerialDevice:
             A single line that is read from the serial port.
 
         """
+        t_start = time.time()
         while self._is_open:
+            # 超时判断
+            t_cur = time.time()
+            if (t_cur - t_start) >= timeout:
+                return b''
+            
             try:
                 msg = self.serialport.readline()
                 if msg != b'':

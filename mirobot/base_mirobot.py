@@ -753,10 +753,10 @@ message
         气泵关闭, 电磁阀开启, 放气
         """
         # valve_pwm_values=('65', '40'),
-        self.set_air_pump(self.pump_pwm_values[0]) # 气泵关闭
-        self.set_valve(self.valve_pwm_values[1]) # 电磁阀打开
+        self.set_air_pump(self.pump_pwm_values[0], wait=False) # 气泵关闭
+        self.set_valve(self.valve_pwm_values[1], wait=False) # 电磁阀打开
         time.sleep(1)
-        self.set_valve(self.valve_pwm_values[0]) # 电磁阀关闭
+        self.set_valve(self.valve_pwm_values[0], wait=False) # 电磁阀关闭
 
     # set the pwm of the air pump
     def set_air_pump(self, pwm, wait=None):

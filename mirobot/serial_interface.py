@@ -129,12 +129,11 @@ class SerialInterface:
         if self._debug and not disable_debug:
             self.logger.debug(f"[SENT] {msg}")
 
-        if wait:
+        if wait_idle:
+            self.wait_until_idle()
+        elif wait:
             output = self.wait_for_ok(disable_debug=disable_debug)
-
-            if wait_idle:
-                self.wait_until_idle()
-
+        
         return output
     
     @property
@@ -205,6 +204,7 @@ class SerialInterface:
 
         # eol: end of line 一行的末尾
         def matches_eol_strings(terms, s):
+            # print("matches_eol_strings: s={}".format(s))
             for eol in terms:
                 # 修改了这里的ok的判断条件
                 # 因为homing成功之后，返回的不是ok而是homeing moving...ok
@@ -230,7 +230,9 @@ class SerialInterface:
         eol_counter = 0
         while eol_counter < eol_threshold:
             # 读取消息
-            msg = self.serial_device.listen_to_device()
+            # 这里其实存在问题就是这里的listen_to_device是死循环
+            msg = self.serial_device.listen_to_device(timeout=0.1)
+            
             # 调试, 打印接收的消息
             if self._debug and not disable_debug:
                 self.logger.debug(f"[RECV] {msg}")
