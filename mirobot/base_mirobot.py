@@ -268,12 +268,16 @@ class BaseMirobot(AbstractContextManager):
             for msg_seg in status_str_list:
                 if "<" in msg_seg:
                     status_msg = msg_seg
-                    ret, status = self._parse_status(status_msg)
-                    if ret:
-                        break
+                    try:
+                        ret, status = self._parse_status(status_msg)
+                        if ret:
+                            break
+                    except Exception as e:
+                        print(e)
             if status is not None:
                 break
-        
+            # 等待一会儿
+            time.sleep(0.1)
         self._set_status(status)
 
     def _set_status(self, status):
@@ -309,8 +313,8 @@ class BaseMirobot(AbstractContextManager):
         # 用正则表达式进行匹配
         state_regex = r'<([^,]*),Angle\(ABCDXYZ\):([-\.\d,]*),Cartesian coordinate\(XYZ RxRyRz\):([-.\d,]*),Pump PWM:(\d+),Valve PWM:(\d+),Motion_MODE:(\d)>'
 
-        regex_match = re.fullmatch(state_regex, msg)
-
+        regex_match = re.match(state_regex, msg)# re.fullmatch(state_regex, msg)
+        
         if regex_match:
             try:
                 state, angles, cartesians, pump_pwm, valve_pwm, motion_mode = regex_match.groups()
@@ -327,11 +331,14 @@ class BaseMirobot(AbstractContextManager):
                                               bool(motion_mode))
                 return True, return_status
             except Exception as exception:
-                self.logger.exception(MirobotStatusError(f"Could not parse status message \"{msg}\" \n{str(exception)}"),
-                                      exc_info=exception)
+                # self.logger.exception(MirobotStatusError(f"Could not parse status message \"{msg}\" \n{str(exception)}"),
+                #                       exc_info=exception)
+                print(f"Could not parse status message \"{msg}\"")
         else:
-            self.logger.error(MirobotStatusError(f"Could not parse status message \"{msg}\"\n{str(exception)}"))
-            return False, None
+            # self.logger.error(MirobotStatusError(f"Could not parse status message \"{msg}\""))
+            print(f"Could not parse status message \"{msg}\"")
+            
+        return False, None
 
     def home_individual(self, wait=None):
         """
